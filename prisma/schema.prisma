@@ -6,14 +6,14 @@ datasource db {
     provider = "postgresql"
 }
 
-model comida {
-    id        Int      @id @default(autoincrement())
-    nome      String
-    descricao String?
-    categoria String
-    preco     Float
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+model Food {
+    id          Int      @id @default(autoincrement())
+    name        String
+    description String
+    price       Decimal  @db.Decimal(10, 2)
+    category    String
+    available   Boolean  @default(true)
+    createdAt   DateTime @default(now())
 
-    @@map("comida")
+    @@map("food")
 }
