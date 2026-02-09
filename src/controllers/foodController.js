@@ -64,7 +64,7 @@ export const create = async (req, res) => {
       return res.status(400).json({ error: "O nome (name) é obrigatório!" });
     if (!description)
       return res.status(400).json({ error: "A descrição (description) é obrigatória!" });
-    if (!price)
+    if (price === undefined)
       return res.status(400).json({ error: "O preço (price) é obrigatório!" });
     if (!category)
       return res.status(400).json({ error: "A categoria (category) é obrigatória!" });
@@ -82,21 +82,25 @@ export const create = async (req, res) => {
     let availableValue = true;
 
     if(available !== undefined) {
-         if (available !== 'true' && available !== 'false') {
+         if (typeof available !== 'boolean') {
         return res.status(400).json({
-            error: 'available deve ser true ou false'
+            error: 'available deve ser boolean (true ou false)'
         })
     }
 
     availableValue =available === 'true'
     }
 
+    if (isNaN(price) || price <= 0) {
+        return res.status(400).json({error: 'Preço deve ser um número positivo'})
+    }
 
-    const data = await model.create({
-      nome,
-      descricao,
-      ano: parseInt(ano),
-      preco: parseFloat(preco),
+    const data = await foodModel.create({
+      name,
+      description,
+      price: parseFloat(price),
+      category: categoriaPermitida,
+      available: availableValue
     });
 
     res.status(201).json({
@@ -146,6 +150,7 @@ export const getById = async (req, res) => {
 export const update = async (req, res) => {
   try {
     const { id } = req.params;
+    const { name, description, price, category, available } = req.body;
 
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.status(400).json({
@@ -155,16 +160,63 @@ export const update = async (req, res) => {
 
     if (isNaN(id)) return res.status(400).json({ error: "ID inválido." });
 
-    const exists = await model.findById(id);
+    const dataToUpdate = {};
+
+     if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({ error: "name não pode ser vazio" });
+      }
+      dataToUpdate.name = name.trim();
+    }
+
+    if (description !== undefined) {
+      if (!description.trim()) {
+        return res.status(400).json({ error: "description não pode ser vazio" });
+      }
+      dataToUpdate.description = description.trim();
+    }
+
+    if (price !== undefined) {
+      if (isNaN(price) || Number(price) <= 0) {
+        return res.status(400).json({
+          error: "price deve ser um número positivo"
+        });
+      }
+      dataToUpdate.price = Number(price);
+    }
+
+      if (category !== undefined) {
+      const categoryNormalizada = category.toLowerCase().trim();
+
+      if (!categorias.includes(categoryNormalizada)) {
+        return res.status(400).json({
+          error: "Categoria inválida",
+          categorias
+        });
+      }
+
+      dataToUpdate.category = categoryNormalizada;
+    }
+
+    if (available !== undefined) {
+      if (typeof available !== "boolean") {
+        return res.status(400).json({
+          error: "available deve ser boolean (true ou false)"
+        });
+      }
+      dataToUpdate.available = available;
+    }
+
+    const exists = await foodModel.findById(id);
     if (!exists) {
       return res
         .status(404)
         .json({ error: "Registro não encontrado para atualizar." });
     }
 
-    const data = await model.update(id, req.body);
+    const data = await foodModel.update(Number(id), dataToUpdate);
     res.json({
-      message: `O registro "${data.nome}" foi atualizado com sucesso!`,
+      message: `O registro "${data.name}" foi atualizado com sucesso!`,
       data,
     });
   } catch (error) {
@@ -179,16 +231,16 @@ export const remove = async (req, res) => {
 
     if (isNaN(id)) return res.status(400).json({ error: "ID inválido." });
 
-    const exists = await model.findById(id);
+    const exists = await foodModel.findById(id);
     if (!exists) {
       return res
         .status(404)
         .json({ error: "Registro não encontrado para deletar." });
     }
 
-    await model.remove(id);
+    await foodModel.remove(id);
     res.json({
-      message: `O registro "${exists.nome}" foi deletado com sucesso!`,
+      message: `O registro "${exists.name}" foi deletado com sucesso!`,
       deletado: exists,
     });
   } catch (error) {
